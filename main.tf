@@ -45,3 +45,4 @@ resource "aws_subnet" "subnet_1" {
     Name = "${var.region}-subnet-1"
   }
 }
+

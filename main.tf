@@ -24,3 +24,13 @@ terraform {
 provider "aws" {
   region = "ap-northeast-2"
 }
+
+// VPC 생성
+// resouce의 "종류", "객체 타입"
+resource "aws_vpc" "example" {
+  cidr_block = "10.0.0.0/16"
+
+  tags = {
+    Name = "example"
+  }
+}

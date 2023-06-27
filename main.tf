@@ -2,7 +2,7 @@ terraform {
   // 이 부분은 terraform cloud에서 설정한 workspace의 이름과 동일해야 함
   // 이 부분은 terraform login 후에 사용가능함
   cloud {
-    organization = "og-1"
+    organization = "lee-og-1"
 
     workspaces {
       name = "ws-1"
@@ -22,15 +22,26 @@ terraform {
 // 리전 설정
 # Configure the AWS Provider
 provider "aws" {
-  region = "ap-northeast-2"
+  region = var.region
 }
 
 // VPC 생성
 // resouce의 "종류", "객체 타입"
-resource "aws_vpc" "example" {
+resource "aws_vpc" "vpc_1" {
   cidr_block = "10.0.0.0/16"
 
   tags = {
-    Name = "example"
+    Name = "${var.region}-vpc-1"
+  }
+}
+
+// 서브넷 생성
+resource "aws_subnet" "subnet_1" {
+  vpc_id            = aws_vpc.vpc_1.id
+  cidr_block        = "10.0.1.0/24"
+  availability_zone = "${var.region}a"
+
+  tags = {
+    Name = "${var.region}-subnet-1"
   }
 }

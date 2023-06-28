@@ -31,7 +31,7 @@ resource "aws_vpc" "vpc_1" {
   cidr_block = "10.0.0.0/16"
 
   tags = {
-    Name = "${var.region}-vpc-1"
+    Name = "${var.prefix}-vpc-1"
   }
 }
 
@@ -42,7 +42,30 @@ resource "aws_subnet" "subnet_1" {
   availability_zone = "${var.region}a"
 
   tags = {
-    Name = "${var.region}-subnet-1"
+    Name = "${var.prefix}-subnet-1"
+  }
+}
+
+// IG 생성
+resource "aws_internet_gateway" "igw_1" {
+  vpc_id = aws_vpc.vpc_1.id
+
+  tags = {
+    Name = "${var.prefix}-igw-1"
+  }
+}
+
+// route table 생성
+resource "aws_route_table" "rt_1" {
+  vpc_id = aws_vpc.vpc_1.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw_1.id
+  }
+
+  tags = {
+    Name = "${var.prefix}-rt-1"
   }
 }
 

@@ -29,6 +29,8 @@ provider "aws" {
 // resource의 "종류", "객체 타입"
 resource "aws_vpc" "vpc_1" {
   cidr_block = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  enable_dns_support   = true
 
   tags = {
     Name = "${var.prefix}-vpc-1"
@@ -151,15 +153,15 @@ resource "aws_instance" "ec2_1" {
   }
 }
 
-resource "aws_s3_bucket" "bucket_jhs512_1" {
-  bucket = "${var.prefix}-bucket-jhs512-1"
+resource "aws_s3_bucket" "bucket_yhlee_1" {
+  bucket = "${var.prefix}-bucket-yhlee-1"
 
   tags = {
-    Name = "${var.prefix}-bucket-jhs512-1"
+    Name = "${var.prefix}-bucket-yhlee-1"
   }
 }
 
-data "aws_iam_policy_document" "bucket_jhs512_1_policy_1_statement" {
+data "aws_iam_policy_document" "bucket_yhlee_1_policy_1_statement" {
   statement {
     sid    = "PublicReadGetObject"
     effect = "Allow"
@@ -170,20 +172,20 @@ data "aws_iam_policy_document" "bucket_jhs512_1_policy_1_statement" {
     }
 
     actions   = ["s3:GetObject"]
-    resources = ["${aws_s3_bucket.bucket_jhs512_1.arn}/*"]
+    resources = ["${aws_s3_bucket.bucket_yhlee_1.arn}/*"]
   }
 }
 
-resource "aws_s3_bucket_policy" "bucket_jhs512_1_policy_1" {
-  bucket = aws_s3_bucket.bucket_jhs512_1.id
+resource "aws_s3_bucket_policy" "bucket_yhlee_1_policy_1" {
+  bucket = aws_s3_bucket.bucket_yhlee_1.id
 
-  policy = data.aws_iam_policy_document.bucket_jhs512_1_policy_1_statement.json
+  policy = data.aws_iam_policy_document.bucket_yhlee_1_policy_1_statement.json
 
-  depends_on = [aws_s3_bucket_public_access_block.bucket_jhs512_1_public_access_block_1]
+  depends_on = [aws_s3_bucket_public_access_block.bucket_yhlee_1_public_access_block_1]
 }
 
-resource "aws_s3_bucket_public_access_block" "bucket_jhs512_1_public_access_block_1" {
-  bucket = aws_s3_bucket.bucket_jhs512_1.id
+resource "aws_s3_bucket_public_access_block" "bucket_yhlee_1_public_access_block_1" {
+  bucket = aws_s3_bucket.bucket_yhlee_1.id
 
   block_public_acls       = false
   block_public_policy     = false

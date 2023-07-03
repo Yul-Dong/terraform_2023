@@ -19,29 +19,26 @@ terraform {
   }
 }
 
-// 리전 설정
 # Configure the AWS Provider
 provider "aws" {
   region = var.region
 }
 
-// VPC 생성
-// resource의 "종류", "객체 타입"
 resource "aws_vpc" "vpc_1" {
   cidr_block = "10.0.0.0/16"
-  enable_dns_hostnames = true
+
   enable_dns_support   = true
+  enable_dns_hostnames = true
 
   tags = {
     Name = "${var.prefix}-vpc-1"
   }
 }
 
-// 서브넷 생성
 resource "aws_subnet" "subnet_1" {
-  vpc_id            = aws_vpc.vpc_1.id
-  cidr_block        = "10.0.1.0/24"
-  availability_zone = "${var.region}a"
+  vpc_id                  = aws_vpc.vpc_1.id
+  cidr_block              = "10.0.1.0/24"
+  availability_zone       = "${var.region}a"
   map_public_ip_on_launch = true
 
   tags = {
@@ -49,7 +46,6 @@ resource "aws_subnet" "subnet_1" {
   }
 }
 
-// IG 생성
 resource "aws_internet_gateway" "igw_1" {
   vpc_id = aws_vpc.vpc_1.id
 
@@ -58,7 +54,6 @@ resource "aws_internet_gateway" "igw_1" {
   }
 }
 
-// route table 생성
 resource "aws_route_table" "rt_1" {
   vpc_id = aws_vpc.vpc_1.id
 
@@ -71,6 +66,7 @@ resource "aws_route_table" "rt_1" {
     Name = "${var.prefix}-rt-1"
   }
 }
+
 
 resource "aws_route_table_association" "association_1" {
   subnet_id      = aws_subnet.subnet_1.id
@@ -101,19 +97,19 @@ resource "aws_security_group" "sg_1" {
 
 # Create IAM role for EC2
 resource "aws_iam_role" "ec2_role_1" {
-  name = "${var.prefix}-ec2-role-1"
+  name = "${var.prefix}-${var.nickname}-ec2-role-1"
 
   assume_role_policy = <<EOF
   {
     "Version": "2012-10-17",
     "Statement": [
       {
+        "Sid": "",
         "Action": "sts:AssumeRole",
         "Principal": {
           "Service": "ec2.amazonaws.com"
         },
-        "Effect": "Allow",
-        "Sid": ""
+        "Effect": "Allow"
       }
     ]
   }
@@ -134,7 +130,7 @@ resource "aws_iam_role_policy_attachment" "ec2_ssm" {
 }
 
 resource "aws_iam_instance_profile" "instance_profile_1" {
-  name = "${var.prefix}-instance-profile-1"
+  name = "${var.prefix}-${var.nickname}-instance-profile-1"
   role = aws_iam_role.ec2_role_1.name
 }
 
@@ -153,15 +149,15 @@ resource "aws_instance" "ec2_1" {
   }
 }
 
-resource "aws_s3_bucket" "bucket_yhlee_1" {
-  bucket = "${var.prefix}-bucket-yhlee-1"
+resource "aws_s3_bucket" "bucket_1" {
+  bucket = "${var.prefix}-bucket-${var.nickname}-1"
 
   tags = {
-    Name = "${var.prefix}-bucket-yhlee-1"
+    Name = "${var.prefix}-bucket-${var.nickname}-1"
   }
 }
 
-data "aws_iam_policy_document" "bucket_yhlee_1_policy_1_statement" {
+data "aws_iam_policy_document" "bucket_1_policy_1_statement" {
   statement {
     sid    = "PublicReadGetObject"
     effect = "Allow"
@@ -172,20 +168,20 @@ data "aws_iam_policy_document" "bucket_yhlee_1_policy_1_statement" {
     }
 
     actions   = ["s3:GetObject"]
-    resources = ["${aws_s3_bucket.bucket_yhlee_1.arn}/*"]
+    resources = ["${aws_s3_bucket.bucket_1.arn}/*"]
   }
 }
 
-resource "aws_s3_bucket_policy" "bucket_yhlee_1_policy_1" {
-  bucket = aws_s3_bucket.bucket_yhlee_1.id
+resource "aws_s3_bucket_policy" "bucket_1_policy_1" {
+  bucket = aws_s3_bucket.bucket_1.id
 
-  policy = data.aws_iam_policy_document.bucket_yhlee_1_policy_1_statement.json
+  policy = data.aws_iam_policy_document.bucket_1_policy_1_statement.json
 
-  depends_on = [aws_s3_bucket_public_access_block.bucket_yhlee_1_public_access_block_1]
+  depends_on = [aws_s3_bucket_public_access_block.bucket_1_public_access_block_1]
 }
 
-resource "aws_s3_bucket_public_access_block" "bucket_yhlee_1_public_access_block_1" {
-  bucket = aws_s3_bucket.bucket_yhlee_1.id
+resource "aws_s3_bucket_public_access_block" "bucket_1_public_access_block_1" {
+  bucket = aws_s3_bucket.bucket_1.id
 
   block_public_acls       = false
   block_public_policy     = false
@@ -207,4 +203,95 @@ resource "aws_route53_record" "record_ec2-1_vpc-1_com" {
   type    = "A"
   ttl     = "300"
   records = [aws_instance.ec2_1.private_ip]
+}
+
+resource "aws_s3_bucket" "bucket_2" {
+  bucket = "${var.prefix}-bucket-${var.nickname}-2"
+
+  tags = {
+    Name = "${var.prefix}-bucket-${var.nickname}-2"
+  }
+}
+
+data "template_file" "template_file_1" {
+  template = "Hello"
+}
+
+resource "aws_s3_object" "object" {
+  bucket       = aws_s3_bucket.bucket_2.id
+  key          = "index.html"
+  content      = data.template_file.template_file_1.rendered
+  content_type = "text/html"
+
+  etag       = md5(data.template_file.template_file_1.rendered)
+  depends_on = [aws_s3_bucket.bucket_2]
+}
+
+resource "aws_cloudfront_origin_access_control" "oac_1" {
+  name                              = "${var.prefix}-${var.nickname}-oac-1"
+  description                       = ""
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+resource "aws_cloudfront_distribution" "cd_1" {
+  enabled = true
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  default_cache_behavior {
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD", "OPTIONS"]
+    target_origin_id = "origin_id_1"
+
+    forwarded_values {
+      query_string = false
+
+      cookies {
+        forward = "none"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+  }
+
+  origin {
+    domain_name              = aws_s3_bucket.bucket_2.bucket_regional_domain_name
+    origin_id                = "origin_id_1"
+    origin_access_control_id = aws_cloudfront_origin_access_control.oac_1.id
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+}
+
+data "aws_iam_policy_document" "bucket_2_policy_1_statement" {
+  statement {
+    actions = ["s3:GetObject"]
+
+    resources = ["${aws_s3_bucket.bucket_2.arn}/*"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = [aws_cloudfront_distribution.cd_1.arn]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "bucket_2_policy_1" {
+  bucket = aws_s3_bucket.bucket_2.id
+
+  policy = data.aws_iam_policy_document.bucket_2_policy_1_statement.json
 }
